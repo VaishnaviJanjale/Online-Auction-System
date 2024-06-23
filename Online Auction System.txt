@@ -1,0 +1,164 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+// Class representing a user participating in the auction
+class User {
+private:
+    string username;
+    double balance;
+
+public:
+    User(string uname, double initial_balance) : username(uname), balance(initial_balance) {}
+
+    string getUsername() const { return username; }
+    double getBalance() const { return balance; }
+    void setBalance(double new_balance) { balance = new_balance; }
+
+    // Function to place a bid
+    bool placeBid(double amount) {
+        if (amount > balance) {
+            cout << "Error: Insufficient balance to place bid." << endl;
+            return false;
+        }
+        balance -= amount;
+        return true;
+    }
+};
+
+// Class representing an item being auctioned
+class AuctionItem {
+private:
+    string name;
+    double starting_price;
+    double current_bid;
+    string current_bidder;
+    bool sold;
+
+public:
+    AuctionItem(string item_name, double start_price)
+        : name(item_name), starting_price(start_price), current_bid(start_price), sold(false) {}
+
+    string getName() const { return name; }
+    double getCurrentBid() const { return current_bid; }
+    string getCurrentBidder() const { return current_bidder; }
+    bool isSold() const { return sold; }
+
+    // Function to place a bid on this item
+    bool placeBid(User& bidder, double amount) {
+        if (amount <= current_bid) {
+            cout << "Error: Bid amount must be higher than current bid." << endl;
+            return false;
+        }
+        if (!bidder.placeBid(amount)) {
+            cout << "Bid cannot be placed due to insufficient balance." << endl;
+            return false;
+        }
+        current_bid = amount;
+        current_bidder = bidder.getUsername();
+        return true;
+    }
+
+    // Function to mark item as sold
+    void markAsSold() {
+        sold = true;
+    }
+};
+
+// Class representing the online auction system
+class OnlineAuction {
+private:
+    vector<AuctionItem> items;
+    vector<User> users;
+
+public:
+    // Function to add a new item to the auction
+    void addItem(string item_name, double start_price) {
+        items.emplace_back(item_name, start_price);
+    }
+
+    // Function to register a new user
+    void registerUser(string username, double initial_balance) {
+        users.emplace_back(username, initial_balance);
+    }
+
+    // Function to display all items in the auction
+    void displayItems() const {
+        cout << "Current Auction Items:" << endl;
+        for (const auto& item : items) {
+            cout << "Name: " << item.getName() << ", Current Bid: $" << item.getCurrentBid();
+            if (item.isSold()) {
+                cout << " (Sold to " << item.getCurrentBidder() << ")";
+            }
+            cout << endl;
+        }
+        cout << endl;
+    }
+
+    // Function to conduct the auction process
+    void conductAuction() {
+        displayItems();
+
+        while (true) {
+            cout << "Enter username to bid (or 'exit' to quit): ";
+            string username;
+            cin >> username;
+            if (username == "exit") {
+                break;
+            }
+
+            auto user_it = find_if(users.begin(), users.end(),
+                [username](const User& u) { return u.getUsername() == username; });
+
+            if (user_it == users.end()) {
+                cout << "User not found. Please try again." << endl;
+                continue;
+            }
+
+            cout << "Enter item name to bid on: ";
+            string item_name;
+            cin >> item_name;
+
+            auto item_it = find_if(items.begin(), items.end(),
+                [item_name](const AuctionItem& item) { return item.getName() == item_name && !item.isSold(); });
+
+            if (item_it == items.end()) {
+                cout << "Item not found or already sold. Please try again." << endl;
+                continue;
+            }
+
+            cout << "Enter bid amount: $";
+            double bid_amount;
+            cin >> bid_amount;
+
+            if (item_it->placeBid(*user_it, bid_amount)) {
+                cout << "Bid placed successfully!" << endl;
+                if (bid_amount >= item_it->getCurrentBid()) {
+                    cout << "You are currently the highest bidder." << endl;
+                }
+            }
+
+            displayItems();
+        }
+    }
+};
+
+int main() {
+    OnlineAuction auction;
+
+    // Registering users
+    auction.registerUser("Alice", 1000.0);
+    auction.registerUser("Bob", 1500.0);
+
+    // Adding items to the auction
+    auction.addItem("Painting", 500.0);
+    auction.addItem("Antique Watch", 1000.0);
+
+    // Conducting the auction
+    auction.conductAuction();
+
+    return 0;
+}
